@@ -1,6 +1,8 @@
 import React, { useState } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
 import Sidebar from '../components/Sidebar'
+import UserProfilePanel from '../components/UserProfilePanel'
+import { useAuth } from '../context/AuthContext'
 
 const PAGE_META: Record<string, { title: string; breadcrumb: string }> = {
   '/':              { title: 'Dashboard',       breadcrumb: 'Inicio / Dashboard' },
@@ -11,18 +13,22 @@ const PAGE_META: Record<string, { title: string; breadcrumb: string }> = {
 }
 
 const MainLayout: React.FC = () => {
-  const [collapsed, setCollapsed] = useState(false)
+  const [collapsed,    setCollapsed]    = useState(false)
+  const [profileOpen,  setProfileOpen]  = useState(false)
   const location = useLocation()
+  const { profile } = useAuth()
 
-  // Resolve active page meta (handle nested routes too)
   const pageMeta =
     PAGE_META[location.pathname] ||
     Object.entries(PAGE_META).find(([key]) => key !== '/' && location.pathname.startsWith(key))?.[1] ||
     { title: 'SIGABIM', breadcrumb: 'Inicio' }
 
+  const getInitials = (name: string) =>
+    name.split(' ').slice(0, 2).map(w => w[0]?.toUpperCase()).join('') || '?'
+
   return (
     <div className="app-shell">
-      <Sidebar collapsed={collapsed} onToggle={() => setCollapsed((c) => !c)} />
+      <Sidebar collapsed={collapsed} onToggle={() => setCollapsed(c => !c)} />
 
       <div className={`app-content${collapsed ? ' sidebar-collapsed' : ''}`}>
         {/* Topbar */}
@@ -46,9 +52,25 @@ const MainLayout: React.FC = () => {
               <i className="fa-regular fa-circle-question" />
             </button>
 
-            {/* Avatar de usuario */}
-            <div className="topbar-avatar" title="Mi cuenta" id="btn-user-menu">
-              AD
+            {/* Avatar de usuario — abre panel de perfil */}
+            <div
+              className="topbar-avatar"
+              title={profile?.nombre ?? 'Mi cuenta'}
+              id="btn-user-menu"
+              onClick={() => setProfileOpen(true)}
+              role="button"
+              tabIndex={0}
+              onKeyDown={e => e.key === 'Enter' && setProfileOpen(true)}
+            >
+              {profile?.avatar_url ? (
+                <img
+                  src={profile.avatar_url}
+                  alt={profile.nombre}
+                  style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                />
+              ) : (
+                getInitials(profile?.nombre ?? '')
+              )}
             </div>
           </div>
         </header>
@@ -58,6 +80,9 @@ const MainLayout: React.FC = () => {
           <Outlet />
         </main>
       </div>
+
+      {/* Panel de perfil */}
+      <UserProfilePanel open={profileOpen} onClose={() => setProfileOpen(false)} />
     </div>
   )
 }
