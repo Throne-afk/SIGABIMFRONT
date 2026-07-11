@@ -118,7 +118,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }
 
   // ─── Update Profile ────────────────────────────────────────────────────────
-  const updateProfile = async (data: { nombre?: string; email?: string }) => {
+  const updateProfile = async (_data: { nombre?: string; email?: string }) => {
     if (!session?.token) throw new Error('No hay sesión activa.')
     // Para simplificar, ignoramos updateProfile temporalmente ya que requeriría el endpoint.
     // Solo lo simulamos:
@@ -126,7 +126,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }
 
   // ─── Upload Avatar ─────────────────────────────────────────────────────────
-  const uploadAvatar = async (file: File): Promise<string> => {
+  const uploadAvatar = async (_file: File): Promise<string> => {
     if (!session?.token) throw new Error('No hay sesión activa.')
     // TODO: Implementar subida de avatares en el backend local.
     throw new Error('Función no implementada en almacenamiento local.');

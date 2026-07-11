@@ -21,7 +21,7 @@ type UploadStatus = 'idle' | 'uploading' | 'processing' | 'error'
 interface Toast {
   id: number
   msg: string
-  type: 'info' | 'warning' | 'success'
+  type: 'info' | 'warning' | 'success' | 'error'
   icon: string
 }
 
