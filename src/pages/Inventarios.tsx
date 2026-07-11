@@ -3,10 +3,16 @@ import {
   uploadInventarioExcel,
   fetchInventarios,
   deleteInventario,
+  createRecord,
+  updateRecord,
   type ParseResult,
   type InventarioRecord,
 } from '../api/inventario'
 import VirtualTable from '../components/VirtualTable'
+import TableToolbar from '../components/TableToolbar'
+import AdvancedFilterModal from '../components/AdvancedFilterModal'
+import RecordDetailPanel from '../components/RecordDetailPanel'
+import RecordEditPanel from '../components/RecordEditPanel'
 
 // ─── Tipos ─────────────────────────────────────────────────────────────────────
 
@@ -191,10 +197,10 @@ const UploadZone: React.FC<{
 
 const InventarioList: React.FC<{
   inventarios: ParseResult[]
-  activeId: string | null
-  onSelect: (inv: ParseResult) => void
+  activeArchivo: string | null
+  onSelect: (archivo: string) => void
   onDelete: (id: string) => void
-}> = ({ inventarios, activeId, onSelect, onDelete }) => {
+}> = ({ inventarios, activeArchivo, onSelect, onDelete }) => {
   if (inventarios.length === 0) {
     return (
       <div className="empty-state" style={{ padding: 'var(--space-8)' }}>
@@ -205,47 +211,63 @@ const InventarioList: React.FC<{
     )
   }
 
+  // Agrupar por archivo
+  const archivosMap = new Map<string, { fecha: string, total: number, ids: string[] }>()
+  inventarios.forEach(inv => {
+    if (!archivosMap.has(inv.archivo)) {
+      archivosMap.set(inv.archivo, { fecha: inv.fechaImportacion, total: inv.totalRegistros, ids: [inv.id] })
+    } else {
+      const g = archivosMap.get(inv.archivo)!
+      g.total += inv.totalRegistros
+      g.ids.push(inv.id)
+    }
+  })
+  const archivos = Array.from(archivosMap.entries())
+
   return (
     <div style={{ display: 'flex', flexDirection: 'column' }}>
-      {inventarios.map((inv, idx) => (
+      {archivos.map(([archivo, data], idx) => (
         <div
-          key={inv.id}
+          key={archivo}
           style={{
             display: 'flex',
             alignItems: 'center',
             gap: 10,
             padding: '10px 14px',
-            borderBottom: idx < inventarios.length - 1 ? '1px solid var(--color-neutral-100)' : 'none',
-            background: activeId === inv.id ? 'var(--color-primary-50)' : '#fff',
+            borderBottom: idx < archivos.length - 1 ? '1px solid var(--color-neutral-100)' : 'none',
+            background: activeArchivo === archivo ? 'var(--color-primary-50)' : '#fff',
             cursor: 'pointer',
             transition: 'background 0.15s',
           }}
-          onClick={() => onSelect(inv)}
-          onMouseEnter={e => { if (activeId !== inv.id) (e.currentTarget as HTMLElement).style.background = 'var(--color-neutral-50)' }}
-          onMouseLeave={e => { if (activeId !== inv.id) (e.currentTarget as HTMLElement).style.background = '#fff' }}
+          onClick={() => onSelect(archivo)}
+          onMouseEnter={e => { if (activeArchivo !== archivo) (e.currentTarget as HTMLElement).style.background = 'var(--color-neutral-50)' }}
+          onMouseLeave={e => { if (activeArchivo !== archivo) (e.currentTarget as HTMLElement).style.background = '#fff' }}
         >
           <i
             className="fa-regular fa-file-excel"
-            style={{ fontSize: 19, color: activeId === inv.id ? 'var(--color-primary-600)' : 'var(--color-success)', flexShrink: 0 }}
+            style={{ fontSize: 19, color: activeArchivo === archivo ? 'var(--color-primary-600)' : 'var(--color-success)', flexShrink: 0 }}
           />
           <div style={{ flex: 1, overflow: 'hidden' }}>
             <div style={{ fontWeight: 600, fontSize: 'var(--font-size-sm)', color: 'var(--color-neutral-800)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {inv.archivo}
+              {archivo}
             </div>
             <div style={{ fontSize: 11, color: 'var(--color-neutral-500)', marginTop: 2 }}>
-              {new Date(inv.fechaImportacion).toLocaleString('es-MX')}
+              {new Date(data.fecha).toLocaleString('es-MX')}
               {' · '}
               <span className="badge badge-blue" style={{ fontSize: 10, padding: '1px 5px' }}>
-                {inv.totalRegistros.toLocaleString()} reg.
+                {data.total.toLocaleString()} reg. totales
               </span>
-              {' · '}<span style={{ opacity: 0.7 }}>{inv.hoja}</span>
+              {' · '}<span style={{ opacity: 0.7 }}>{data.ids.length} hoja(s)</span>
             </div>
           </div>
           <button
             className="btn btn-sm btn-danger"
-            id={`btn-delete-${inv.id}`}
-            title="Eliminar inventario"
-            onClick={e => { e.stopPropagation(); onDelete(inv.id) }}
+            id={`btn-delete-${archivo}`}
+            title="Eliminar inventario (todas las hojas)"
+            onClick={e => { 
+              e.stopPropagation(); 
+              data.ids.forEach(id => onDelete(id));
+            }}
           >
             <i className="fa-regular fa-trash-can" />
           </button>
@@ -259,12 +281,32 @@ const InventarioList: React.FC<{
 
 const Inventarios: React.FC = () => {
   const [inventarios, setInventarios]         = useState<ParseResult[]>([])
+  const [activeArchivo, setActiveArchivo]       = useState<string | null>(null)
   const [activeInventario, setActiveInventario] = useState<ParseResult | null>(null)
   const [uploadStatus, setUploadStatus]       = useState<UploadStatus>('idle')
   const [progress, setProgress]               = useState(0)
   const [errorMsg, setErrorMsg]               = useState('')
   const [selectedFile, setSelectedFile]       = useState<File | null>(null)
   const [loadingList, setLoadingList]         = useState(true)
+
+  // Estados para búsqueda y filtros
+  const [globalSearch, setGlobalSearch] = useState(() => sessionStorage.getItem('sigabim_search') || '')
+  
+  useEffect(() => {
+    sessionStorage.setItem('sigabim_search', globalSearch)
+  }, [globalSearch])
+
+  const [advancedFilters, setAdvancedFilters] = useState<Record<string, string>>({})
+  const [isFilterModalOpen, setIsFilterModalOpen] = useState(false)
+
+  // Estados para el registro seleccionado
+  const [selectedRecord, setSelectedRecord] = useState<InventarioRecord | null>(null)
+  const [selectedRowIndex, setSelectedRowIndex] = useState<number | null>(null)
+
+  // Estados para agregar/editar
+  const [showEditPanel, setShowEditPanel] = useState(false)
+  const [editingRecord, setEditingRecord] = useState<InventarioRecord | null>(null)
+  const [isSaving, setIsSaving] = useState(false)
 
   const { toasts, show: showToast } = useToast()
 
@@ -278,9 +320,6 @@ const Inventarios: React.FC = () => {
       const resp = await fetchInventarios()
       if (resp.success && resp.data) {
         setInventarios(resp.data)
-        if (resp.data.length > 0) {
-          setActiveInventario(current => current ?? resp.data![0])
-        }
       }
     } catch { /* silencioso */ }
     finally { setLoadingList(false) }
@@ -301,11 +340,12 @@ const Inventarios: React.FC = () => {
       })
 
       if (response.success && response.data) {
-        setInventarios(prev => [response.data!, ...prev])
-        setActiveInventario(response.data)
+        setInventarios(prev => [...response.data!, ...prev])
+        setActiveArchivo(response.data[0].archivo)
+        setActiveInventario(null)
         setUploadStatus('idle')
         showToast(
-          `${response.data.totalRegistros.toLocaleString()} registros importados correctamente`,
+          `${response.data.length} hoja(s) importada(s) correctamente`,
           'success',
           'fa-solid fa-circle-check'
         )
@@ -333,7 +373,7 @@ const Inventarios: React.FC = () => {
       await deleteInventario(id)
       const updated = inventarios.filter(inv => inv.id !== id)
       setInventarios(updated)
-      if (activeInventario?.id === id) setActiveInventario(updated[0] ?? null)
+      if (activeInventario?.id === id) setActiveInventario(null)
       showToast('Inventario eliminado', 'warning', 'fa-solid fa-trash-can')
     } catch {
       showToast('No se pudo eliminar el inventario', 'warning', 'fa-solid fa-circle-xmark')
@@ -346,13 +386,51 @@ const Inventarios: React.FC = () => {
    * Editar registro — muestra un toast informativo.
    * TODO: Abrir modal de edición con formulario dinámico.
    */
-  const handleEdit = useCallback((_row: InventarioRecord, idx: number) => {
-    showToast(
-      `Editar registro #${idx + 1} — funcionalidad disponible próximamente`,
-      'info',
-      'fa-solid fa-pen'
-    )
-  }, [showToast])
+  const handleEdit = useCallback((row: InventarioRecord, _idx: number) => {
+    setEditingRecord(row)
+    setShowEditPanel(true)
+  }, [])
+
+  const handleAdd = useCallback(() => {
+    setEditingRecord(null)
+    setShowEditPanel(true)
+  }, [])
+
+  const handleSaveRecord = async (data: Partial<InventarioRecord>) => {
+    if (!activeInventario) return
+    setIsSaving(true)
+    try {
+      if (editingRecord && editingRecord.id) {
+        // Modo Edición
+        const res = await updateRecord(activeInventario.id, editingRecord.id, data)
+        if (res.success) {
+          showToast('Registro actualizado exitosamente', 'success', 'fa-solid fa-check')
+          setShowEditPanel(false)
+          // Forzar recarga de la tabla cambiando el search o reseteando filters, o simplemente llamando algo
+          // Por simplicidad, podemos limpiar la búsqueda para recargar
+          setGlobalSearch(' ') 
+          setTimeout(() => setGlobalSearch(''), 50)
+        } else {
+          showToast(res.message || 'Error al actualizar', 'error', 'fa-solid fa-xmark')
+        }
+      } else {
+        // Modo Creación
+        const res = await createRecord(activeInventario.id, data as Omit<InventarioRecord, 'id'>)
+        if (res.success) {
+          showToast('Registro creado exitosamente', 'success', 'fa-solid fa-check')
+          setShowEditPanel(false)
+          setGlobalSearch(' ')
+          setTimeout(() => setGlobalSearch(''), 50)
+        } else {
+          showToast(res.message || 'Error al crear registro', 'error', 'fa-solid fa-xmark')
+        }
+      }
+    } catch (err: any) {
+      showToast(err.response?.data?.message || 'Ocurrió un error al guardar', 'error', 'fa-solid fa-xmark')
+    } finally {
+      setIsSaving(false)
+    }
+  }
 
   /**
    * Inhabilitar registro — muestra confirmación y toast.
@@ -386,10 +464,11 @@ const Inventarios: React.FC = () => {
       </div>
 
       {/* ── Layout ─────────────────────────────────────────────────── */}
-      <div style={{ display: 'grid', gridTemplateColumns: '290px 1fr', gap: 'var(--space-5)', alignItems: 'start' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: activeInventario ? '1fr' : '290px 1fr', gap: 'var(--space-5)', alignItems: 'start', transition: 'all 0.3s ease' }}>
 
         {/* ── Panel izquierdo ──────────────────────────────────────── */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
+        {!activeInventario && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 'var(--space-4)' }}>
           <UploadZone
             status={uploadStatus}
             progress={progress}
@@ -423,15 +502,21 @@ const Inventarios: React.FC = () => {
             ) : (
               <InventarioList
                 inventarios={inventarios}
-                activeId={activeInventario?.id ?? null}
-                onSelect={setActiveInventario}
+                activeArchivo={activeArchivo}
+                onSelect={(archivo) => {
+                  setActiveArchivo(archivo)
+                  setActiveInventario(null)
+                  setSelectedRecord(null)
+                  setSelectedRowIndex(null)
+                }}
                 onDelete={handleDelete}
               />
             )}
           </div>
         </div>
+        )}
 
-        {/* ── Panel derecho — Tabla Excel ───────────────────────────── */}
+        {/* ── Panel derecho — Tabla Excel o Selección ───────────────────────────── */}
         <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
           {activeInventario ? (
             <>
@@ -444,9 +529,17 @@ const Inventarios: React.FC = () => {
                 gap: 10,
                 flexWrap: 'wrap',
               }}>
-                <i className="fa-regular fa-file-excel" style={{ fontSize: 16, color: 'var(--color-success)' }} />
+                <button 
+                  className="btn btn-sm btn-secondary" 
+                  onClick={() => setActiveInventario(null)}
+                  title="Volver a la selección de apartados"
+                  style={{ padding: '4px 8px' }}
+                >
+                  <i className="fa-solid fa-arrow-left" />
+                </button>
+                <i className="fa-regular fa-file-excel" style={{ fontSize: 16, color: 'var(--color-success)', marginLeft: 8 }} />
                 <span className="card-title" style={{ fontSize: 'var(--font-size-sm)', flex: 1 }}>
-                  {activeInventario.archivo}
+                  {activeInventario.archivo} <span style={{ opacity: 0.6 }}>/ {activeInventario.hoja}</span>
                 </span>
                 <div style={{ display: 'flex', gap: 5 }}>
                   <span className="badge badge-blue">
@@ -463,18 +556,114 @@ const Inventarios: React.FC = () => {
                 </div>
               </div>
 
-              {/* Tabla Excel con scroll infinito */}
-              <div style={{ padding: '10px 14px 14px' }}>
-                <VirtualTable
-                  key={activeInventario.id}
-                  inventarioId={activeInventario.id}
-                  cabeceras={activeInventario.cabeceras}
-                  totalRegistros={activeInventario.totalRegistros}
-                  onEdit={handleEdit}
-                  onDisable={handleDisable}
+              {/* Toolbar */}
+              <div style={{ padding: '0 16px', marginTop: '15px' }}>
+              {/* Toolbar */}
+              <div style={{ padding: '0 16px', marginTop: '15px', display: !showEditPanel ? 'block' : 'none' }}>
+                <TableToolbar 
+                  search={globalSearch}
+                  onSearch={setGlobalSearch}
+                  onOpenFilter={() => setIsFilterModalOpen(!isFilterModalOpen)}
+                  onAdd={handleAdd}
+                  onExport={() => showToast('Exportación de tabla en desarrollo', 'info')}
+                  activeFiltersCount={Object.keys(advancedFilters).length}
                 />
               </div>
+              </div>
+
+              {/* Panel de Filtros Avanzados (ahora integrado en línea) */}
+              {/* Panel de Filtros Avanzados (ahora integrado en línea) */}
+              <div style={{ padding: '0 16px', display: !showEditPanel ? 'block' : 'none' }}>
+                <AdvancedFilterModal 
+                  isOpen={isFilterModalOpen}
+                  onClose={() => setIsFilterModalOpen(false)}
+                  initialFilters={advancedFilters}
+                  onApply={setAdvancedFilters}
+                  cabeceras={activeInventario?.cabeceras || []}
+                  inventarioId={activeInventario?.id || ''}
+                />
+              </div>
+
+              {/* Tabla Excel con scroll infinito */}
+              {/* Panel de Edición o Tabla Excel */}
+              <div style={{ padding: '0 14px 14px', flex: (selectedRecord && !showEditPanel) ? '1 1 50%' : '1 1 auto', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+                {showEditPanel ? (
+                  <RecordEditPanel
+                    record={editingRecord}
+                    cabeceras={activeInventario.cabeceras}
+                    inventarioId={activeInventario.id}
+                    onSave={handleSaveRecord}
+                    onCancel={() => setShowEditPanel(false)}
+                    isSaving={isSaving}
+                  />
+                ) : (
+                  <VirtualTable
+                    key={activeInventario.id + globalSearch + JSON.stringify(advancedFilters)}
+                    inventarioId={activeInventario.id}
+                    cabeceras={activeInventario.cabeceras}
+                    totalRegistros={activeInventario.totalRegistros}
+                    search={globalSearch}
+                    filters={advancedFilters}
+                    onEdit={handleEdit}
+                    onDisable={handleDisable}
+                    selectedRowIndex={selectedRowIndex}
+                    onRowClick={(row, idx) => {
+                      setSelectedRecord(row);
+                      setSelectedRowIndex(idx);
+                    }}
+                  />
+                )}
+              </div>
+
+              {/* Panel de Detalles del Registro Seleccionado */}
+              {/* Panel de Detalles del Registro Seleccionado */}
+              {(selectedRecord && !showEditPanel) && (
+                <div style={{ flex: '0 0 auto' }}>
+                  <RecordDetailPanel 
+                    record={selectedRecord} 
+                    onClose={() => {
+                      setSelectedRecord(null);
+                      setSelectedRowIndex(null);
+                    }} 
+                  />
+                </div>
+              )}
             </>
+          ) : activeArchivo ? (
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: 400, padding: 'var(--space-10)' }}>
+              <h2 style={{ fontSize: '1.4rem', color: 'var(--color-neutral-800)', marginBottom: 'var(--space-8)' }}>
+                Selecciona el apartado para <br/><span style={{ color: 'var(--color-primary-600)' }}>{activeArchivo}</span>
+              </h2>
+              <div style={{ display: 'flex', gap: 'var(--space-6)', flexWrap: 'wrap', justifyContent: 'center' }}>
+                {inventarios.filter(inv => inv.archivo === activeArchivo).map(inv => {
+                  const isIntangible = inv.hoja.toLowerCase().includes('intangible');
+                  const bgColor = isIntangible ? 'linear-gradient(135deg, #fce4e4, #f8b4b4)' : 'linear-gradient(135deg, #e4fce4, #b4f8b4)';
+                  const iconColor = isIntangible ? '#7a1532' : '#145c43';
+                  const iconName = isIntangible ? 'fa-cloud' : 'fa-chair';
+                  
+                  return (
+                    <div 
+                      key={inv.id} 
+                      className="card upload-zone" 
+                      style={{ flex: 1, minWidth: 240, maxWidth: 300, padding: 'var(--space-8)' }}
+                      onClick={() => setActiveInventario(inv)}
+                    >
+                      <div className="upload-icon" style={{ background: bgColor, marginBottom: 'var(--space-4)' }}>
+                        <i className={`fa-solid ${iconName}`} style={{ color: iconColor }} />
+                      </div>
+                      <h3 style={{ fontSize: '1.1rem', marginBottom: 'var(--space-2)', color: 'var(--color-neutral-800)' }}>{inv.hoja}</h3>
+                      <p style={{ margin: 0, fontSize: '0.9rem', color: 'var(--color-neutral-500)' }}>{inv.totalRegistros.toLocaleString()} registros importados</p>
+                    </div>
+                  )
+                })}
+              </div>
+              <button 
+                className="btn btn-secondary mt-8" 
+                onClick={() => setActiveArchivo(null)}
+              >
+                <i className="fa-solid fa-arrow-left" /> Volver a inventarios guardados
+              </button>
+            </div>
           ) : (
             <div className="empty-state">
               <i className="fa-solid fa-table" />

@@ -13,6 +13,7 @@ const apiClient = axios.create({
 export type CellValue = string | number | boolean | null | undefined
 
 export interface InventarioRecord {
+  id?: string
   seccion: CellValue
   categoria: CellValue
   datos: Record<string, CellValue>
@@ -53,12 +54,12 @@ export const uploadInventarioExcel = async (
   file: File,
   sheetIndex = 0,
   onProgress?: (percent: number) => void
-): Promise<ApiResponse<ParseResult>> => {
+): Promise<ApiResponse<ParseResult[]>> => {
   const formData = new FormData()
   formData.append('file', file)
   formData.append('sheetIndex', String(sheetIndex))
 
-  const response = await apiClient.post<ApiResponse<ParseResult>>(
+  const response = await apiClient.post<ApiResponse<ParseResult[]>>(
     '/inventarios/upload',
     formData,
     {
@@ -90,11 +91,33 @@ export const fetchInventarios = async (): Promise<ApiResponse<ParseResult[]>> =>
 export const fetchInventarioRows = async (
   id: string,
   page: number,
-  limit = 100
+  limit = 100,
+  search?: string,
+  filters?: Record<string, string>
 ): Promise<ApiResponse<RowsPage>> => {
+  const params: Record<string, any> = { page, limit }
+  if (search) params.search = search
+  if (filters && Object.keys(filters).length > 0) params.filters = JSON.stringify(filters)
+
   const response = await apiClient.get<ApiResponse<RowsPage>>(
     `/inventarios/${id}/rows`,
-    { params: { page, limit } }
+    { params }
+  )
+  return response.data
+}
+
+/**
+ * Obtiene los valores únicos de una columna para poblar dropdowns de filtros.
+ * Devuelve hasta `limit` valores únicos, ordenados alfabéticamente.
+ */
+export const fetchColumnValues = async (
+  id: string,
+  col: string,
+  limit = 200
+): Promise<ApiResponse<string[]>> => {
+  const response = await apiClient.get<ApiResponse<string[]>>(
+    `/inventarios/${id}/column-values`,
+    { params: { col, limit } }
   )
   return response.data
 }
@@ -104,5 +127,34 @@ export const fetchInventarioRows = async (
  */
 export const deleteInventario = async (id: string): Promise<ApiResponse> => {
   const response = await apiClient.delete<ApiResponse>(`/inventarios/${id}`)
+  return response.data
+}
+
+/**
+ * Crea un nuevo registro en el inventario.
+ */
+export const createRecord = async (
+  inventarioId: string,
+  record: Omit<InventarioRecord, 'id'>
+): Promise<ApiResponse<InventarioRecord>> => {
+  const response = await apiClient.post<ApiResponse<InventarioRecord>>(
+    `/inventarios/${inventarioId}/rows`,
+    record
+  )
+  return response.data
+}
+
+/**
+ * Actualiza un registro existente en el inventario.
+ */
+export const updateRecord = async (
+  inventarioId: string,
+  rowId: string,
+  record: Partial<InventarioRecord>
+): Promise<ApiResponse<InventarioRecord>> => {
+  const response = await apiClient.put<ApiResponse<InventarioRecord>>(
+    `/inventarios/${inventarioId}/rows/${rowId}`,
+    record
+  )
   return response.data
 }

@@ -1,14 +1,15 @@
 import React, { useEffect, useState } from 'react'
-import { supabase } from '../lib/supabase'
-import type { Profile } from '../lib/supabase'
+import type { Profile } from '../context/AuthContext'
+import { useAuth } from '../context/AuthContext'
 
-const API_URL = import.meta.env.VITE_API_URL as string
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001/api'
 
 const Administracion: React.FC = () => {
-  const [users, setUsers]     = useState<Profile[]>([])
+  const { session } = useAuth()
+  const [users, setUsers] = useState<Profile[]>([])
   const [loading, setLoading] = useState(true)
   const [updating, setUpdating] = useState<string | null>(null)
-  const [msg, setMsg]         = useState<{ type: 'ok' | 'err'; text: string } | null>(null)
+  const [msg, setMsg] = useState<{ type: 'ok' | 'err'; text: string } | null>(null)
 
   const showMsg = (type: 'ok' | 'err', text: string) => {
     setMsg({ type, text })
@@ -17,32 +18,61 @@ const Administracion: React.FC = () => {
 
   const fetchUsers = async () => {
     setLoading(true)
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('*')
-      .order('created_at', { ascending: false })
-    if (!error) setUsers(data as Profile[])
+    try {
+      const res = await fetch(`${API_URL}/users`, {
+        headers: { Authorization: `Bearer ${session?.token}` }
+      });
+      const data = await res.json();
+      if (data.success) {
+        setUsers(data.data.sort((a: any, b: any) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()));
+      }
+    } catch (err) {
+      console.error(err);
+    }
     setLoading(false)
   }
 
-  useEffect(() => { fetchUsers() }, [])
+  useEffect(() => { 
+    if (session?.token) fetchUsers() 
+  }, [session])
 
-  const changeStatus = async (userId: string, status: 'aprobado' | 'denegado') => {
+  const changeStatusAndRole = async (userId: string, status: 'aprobado' | 'denegado', rol?: 'admin' | 'editor') => {
     setUpdating(userId)
     try {
-      const { data: sessionData } = await supabase.auth.getSession()
-      const token = sessionData.session?.access_token
-      const res = await fetch(`${API_URL}/api/auth/users/${userId}/status`, {
+      const body: any = { status };
+      if (rol) body.rol = rol;
+
+      const res = await fetch(`${API_URL}/users/${userId}/status`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
+          'Authorization': `Bearer ${session?.token}`,
         },
-        body: JSON.stringify({ status }),
+        body: JSON.stringify(body),
       })
       const json = await res.json()
-      if (!res.ok) throw new Error(json.message || 'Error al actualizar')
+      if (!res.ok || !json.success) throw new Error(json.message || 'Error al actualizar')
       showMsg('ok', `Usuario ${status === 'aprobado' ? 'aprobado' : 'denegado'} correctamente.`)
+      await fetchUsers()
+    } catch (err: any) {
+      showMsg('err', err.message)
+    } finally {
+      setUpdating(null)
+    }
+  }
+
+  const deleteUser = async (userId: string) => {
+    if (!confirm('¿Estás seguro de que deseas eliminar permanentemente a este usuario?')) return;
+    
+    setUpdating(userId)
+    try {
+      const res = await fetch(`${API_URL}/users/${userId}`, {
+        method: 'DELETE',
+        headers: { 'Authorization': `Bearer ${session?.token}` },
+      })
+      const json = await res.json()
+      if (!res.ok || !json.success) throw new Error(json.message || 'Error al eliminar')
+      showMsg('ok', 'Usuario eliminado correctamente.')
       await fetchUsers()
     } catch (err: any) {
       showMsg('err', err.message)
@@ -57,17 +87,22 @@ const Administracion: React.FC = () => {
     return <span className="badge badge-yellow"><i className="fa-solid fa-clock" /> Pendiente</span>
   }
 
-  const fmt = (iso: string) => new Date(iso).toLocaleDateString('es-GT', {
+  const roleBadge = (rol: string) => {
+    if (rol === 'admin') return <span className="badge badge-blue"><i className="fa-solid fa-user-shield" /> Admin</span>
+    return <span className="badge badge-gray"><i className="fa-solid fa-user-pen" /> Editor</span>
+  }
+
+  const fmt = (iso?: string) => iso ? new Date(iso).toLocaleDateString('es-GT', {
     day: '2-digit', month: 'short', year: 'numeric'
-  })
+  }) : '—'
 
   return (
     <div className="animate-fade-in">
       <div className="page-header">
         <div className="flex items-center justify-between">
           <div>
-            <h1>Administración</h1>
-            <p>Gestiona usuarios, roles y permisos del sistema SIGABIM.</p>
+            <h1>Administrador de registros</h1>
+            <p>Aprueba accesos, asigna roles y gestiona a los usuarios del sistema.</p>
           </div>
           <button className="btn btn-secondary" onClick={fetchUsers} id="btn-refresh-users">
             <i className="fa-solid fa-rotate" /> Actualizar
@@ -86,7 +121,7 @@ const Administracion: React.FC = () => {
         <div className="card-header" style={{ padding: 'var(--space-5) var(--space-6)', borderBottom: '1px solid var(--color-neutral-200)' }}>
           <span className="card-title">
             <i className="fa-solid fa-users" style={{ marginRight: 8, color: 'var(--color-primary-600)' }} />
-            Registros de usuarios
+            Usuarios registrados
           </span>
           <span className="badge badge-blue">{users.length} usuarios</span>
         </div>
@@ -110,6 +145,7 @@ const Administracion: React.FC = () => {
                   <th>Empleado</th>
                   <th>Teléfono</th>
                   <th>Estado</th>
+                  <th>Rol</th>
                   <th>Fecha de solicitud</th>
                   <th style={{ textAlign: 'center' }}>Acciones</th>
                 </tr>
@@ -133,33 +169,65 @@ const Administracion: React.FC = () => {
                     </td>
                     <td>{u.telefono || <span style={{ color: 'var(--color-neutral-400)' }}>—</span>}</td>
                     <td>{statusBadge(u.status)}</td>
+                    <td>{roleBadge(u.rol)}</td>
                     <td style={{ fontSize: 13, color: 'var(--color-neutral-500)' }}>{fmt(u.created_at)}</td>
                     <td>
                       <div style={{ display: 'flex', gap: 6, justifyContent: 'center' }}>
+                        {u.status !== 'aprobado' && (
+                          <>
+                            <button
+                              className="btn btn-sm"
+                              style={{ background: 'var(--color-success-light)', color: 'var(--color-success)', borderColor: '#bbf7d0' }}
+                              onClick={() => changeStatusAndRole(u.id, 'aprobado', 'editor')}
+                              disabled={updating === u.id}
+                              title="Aprobar como Editor"
+                            >
+                              {updating === u.id
+                                ? <div className="spinner" style={{ width: 12, height: 12, borderWidth: 2 }} />
+                                : <><i className="fa-solid fa-check" /> Aprobar (Editor)</>
+                              }
+                            </button>
+                            <button
+                              className="btn btn-sm"
+                              style={{ background: 'var(--color-primary-100)', color: 'var(--color-primary-700)', borderColor: 'var(--color-primary-200)' }}
+                              onClick={() => changeStatusAndRole(u.id, 'aprobado', 'admin')}
+                              disabled={updating === u.id}
+                              title="Aprobar como Admin"
+                            >
+                              {updating === u.id
+                                ? <div className="spinner" style={{ width: 12, height: 12, borderWidth: 2 }} />
+                                : <><i className="fa-solid fa-user-shield" /> Aprobar (Admin)</>
+                              }
+                            </button>
+                            <button
+                              className="btn btn-sm btn-danger"
+                              onClick={() => changeStatusAndRole(u.id, 'denegado')}
+                              disabled={updating === u.id}
+                              title="Denegar acceso"
+                            >
+                              <i className="fa-solid fa-xmark" />
+                            </button>
+                          </>
+                        )}
+                        {u.status === 'aprobado' && (
+                          <select 
+                            className="input" 
+                            style={{ padding: '4px 8px', height: '30px', fontSize: '13px' }}
+                            value={u.rol}
+                            onChange={(e) => changeStatusAndRole(u.id, 'aprobado', e.target.value as 'admin' | 'editor')}
+                            disabled={updating === u.id}
+                          >
+                            <option value="admin">Administrador</option>
+                            <option value="editor">Editor</option>
+                          </select>
+                        )}
                         <button
-                          id={`btn-approve-${u.id.slice(0,8)}`}
-                          className="btn btn-sm"
-                          style={{ background: 'var(--color-success-light)', color: 'var(--color-success)', borderColor: '#bbf7d0' }}
-                          onClick={() => changeStatus(u.id, 'aprobado')}
-                          disabled={updating === u.id || u.status === 'aprobado'}
-                          title="Aprobar acceso"
-                        >
-                          {updating === u.id
-                            ? <div className="spinner" style={{ width: 12, height: 12, borderWidth: 2 }} />
-                            : <><i className="fa-solid fa-check" /> Aprobar</>
-                          }
-                        </button>
-                        <button
-                          id={`btn-deny-${u.id.slice(0,8)}`}
                           className="btn btn-sm btn-danger"
-                          onClick={() => changeStatus(u.id, 'denegado')}
-                          disabled={updating === u.id || u.status === 'denegado'}
-                          title="Denegar acceso"
+                          onClick={() => deleteUser(u.id)}
+                          disabled={updating === u.id}
+                          title="Eliminar usuario"
                         >
-                          {updating === u.id
-                            ? <div className="spinner" style={{ width: 12, height: 12, borderWidth: 2 }} />
-                            : <><i className="fa-solid fa-xmark" /> Denegar</>
-                          }
+                          <i className="fa-regular fa-trash-can" />
                         </button>
                       </div>
                     </td>

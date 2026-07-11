@@ -1,11 +1,13 @@
 import React from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
+import { useAuth } from '../context/AuthContext'
 
 interface NavItem {
   path: string
   label: string
   icon: string
   description: string
+  adminOnly?: boolean
 }
 
 const NAV_ITEMS: NavItem[] = [
@@ -26,18 +28,21 @@ const NAV_ITEMS: NavItem[] = [
     label: 'Catálogos',
     icon: 'fa-solid fa-layer-group',
     description: 'Catálogos de activos',
+    adminOnly: true,
   },
   {
     path: '/configuracion',
     label: 'Configuración',
     icon: 'fa-solid fa-sliders',
     description: 'Configuración del sistema',
+    adminOnly: true,
   },
   {
     path: '/administracion',
     label: 'Administración',
     icon: 'fa-solid fa-shield-halved',
     description: 'Usuarios y permisos',
+    adminOnly: true,
   },
 ]
 
@@ -48,6 +53,13 @@ interface SidebarProps {
 
 const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
   const location = useLocation()
+  const { profile } = useAuth()
+
+  // Si el usuario es editor, filtramos los ítems adminOnly
+  const visibleItems = NAV_ITEMS.filter(item => {
+    if (item.adminOnly && profile?.rol !== 'admin') return false
+    return true
+  })
 
   return (
     <aside className={`sidebar${collapsed ? ' collapsed' : ''}`}>
@@ -66,7 +78,7 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
       <nav className="sidebar-nav">
         <div className="nav-section-label">Menú principal</div>
 
-        {NAV_ITEMS.map((item) => {
+        {visibleItems.map((item) => {
           const isActive =
             item.path === '/'
               ? location.pathname === '/'
