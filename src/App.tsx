@@ -7,6 +7,7 @@ import Inventarios from './pages/Inventarios'
 import Catalogos from './pages/Catalogos'
 import Configuracion from './pages/Configuracion'
 import Administracion from './pages/Administracion'
+import Bitacora from './pages/Bitacora'
 import Login from './pages/Login'
 import Register from './pages/Register'
 

@@ -352,7 +352,7 @@ const VirtualTable: React.FC<VirtualTableProps> = ({
   let currentGroup: string | null = null;
   let spanCount = 0;
 
-  cabeceras.forEach((colName) => {
+  renderCabeceras.forEach((colName) => {
     const group = findGroup(colName);
     if (group === currentGroup) {
       spanCount++;

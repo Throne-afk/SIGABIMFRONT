@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
 import Sidebar from '../components/Sidebar'
 import UserProfilePanel from '../components/UserProfilePanel'
+import NotificationsPanel from '../components/NotificationsPanel'
 import { useAuth } from '../context/AuthContext'
 
 const PAGE_META: Record<string, { title: string; breadcrumb: string }> = {
@@ -16,6 +17,8 @@ const MainLayout: React.FC = () => {
   const [collapsed,    setCollapsed]    = useState(false)
   const [mobileOpen,   setMobileOpen]   = useState(false)
   const [profileOpen,  setProfileOpen]  = useState(false)
+  const [notifOpen,    setNotifOpen]    = useState(false)
+  const [notifCount,   setNotifCount]   = useState(0)
   const location = useLocation()
   const { profile } = useAuth()
 
@@ -61,8 +64,24 @@ const MainLayout: React.FC = () => {
 
           <div className="topbar-right">
             {/* Notificaciones */}
-            <button className="topbar-btn" title="Notificaciones" id="btn-notifications">
+            <button 
+              className="topbar-btn" 
+              title="Notificaciones" 
+              id="btn-notifications"
+              onClick={() => setNotifOpen(!notifOpen)}
+              style={{ position: 'relative' }}
+            >
               <i className="fa-regular fa-bell" />
+              {notifCount > 0 && (
+                <span style={{
+                  position: 'absolute', top: 2, right: 2,
+                  background: 'var(--color-danger-500)', color: 'white',
+                  fontSize: 10, fontWeight: 'bold', borderRadius: '50%',
+                  width: 16, height: 16, display: 'flex', alignItems: 'center', justifyContent: 'center'
+                }}>
+                  {notifCount > 9 ? '9+' : notifCount}
+                </span>
+              )}
             </button>
 
             {/* Ayuda */}
@@ -101,6 +120,9 @@ const MainLayout: React.FC = () => {
 
       {/* Panel de perfil */}
       <UserProfilePanel open={profileOpen} onClose={() => setProfileOpen(false)} />
+      
+      {/* Panel de notificaciones */}
+      <NotificationsPanel open={notifOpen} onClose={() => setNotifOpen(false)} onCountChange={setNotifCount} />
     </div>
   )
 }

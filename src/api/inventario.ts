@@ -8,6 +8,15 @@ const apiClient = axios.create({
   timeout: 120000, // 2 minutos para archivos Excel muy grandes
 })
 
+// Interceptor para inyectar el token de sesión y permitir la auditoría en el backend
+apiClient.interceptors.request.use((config) => {
+  const token = localStorage.getItem('sigabim_token')
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`
+  }
+  return config
+})
+
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
 export type CellValue = string | number | boolean | null | undefined

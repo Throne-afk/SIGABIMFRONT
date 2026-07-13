@@ -44,6 +44,13 @@ const NAV_ITEMS: NavItem[] = [
     description: 'Usuarios y permisos',
     adminOnly: true,
   },
+  {
+    path: '/bitacora',
+    label: 'Bitácora',
+    icon: 'fa-solid fa-clipboard-list',
+    description: 'Auditoría y movimientos',
+    adminOnly: true,
+  },
 ]
 
 interface SidebarProps {
