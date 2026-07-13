@@ -14,6 +14,7 @@ const PAGE_META: Record<string, { title: string; breadcrumb: string }> = {
 
 const MainLayout: React.FC = () => {
   const [collapsed,    setCollapsed]    = useState(false)
+  const [mobileOpen,   setMobileOpen]   = useState(false)
   const [profileOpen,  setProfileOpen]  = useState(false)
   const location = useLocation()
   const { profile } = useAuth()
@@ -28,17 +29,34 @@ const MainLayout: React.FC = () => {
 
   return (
     <div className="app-shell">
-      <Sidebar collapsed={collapsed} onToggle={() => setCollapsed(c => !c)} />
+      {/* Mobile Overlay */}
+      <div 
+        className={`sidebar-overlay ${mobileOpen ? 'active' : ''}`} 
+        onClick={() => setMobileOpen(false)} 
+      />
+
+      <Sidebar 
+        collapsed={collapsed} 
+        onToggle={() => setCollapsed(c => !c)} 
+        mobileOpen={mobileOpen}
+        onMobileClose={() => setMobileOpen(false)}
+      />
 
       <div className={`app-content${collapsed ? ' sidebar-collapsed' : ''}`}>
         {/* Topbar */}
         <header className={`topbar${collapsed ? ' sidebar-collapsed' : ''}`}>
-          <div className="topbar-left">
-            <h1 className="topbar-title">{pageMeta.title}</h1>
-            <span className="topbar-breadcrumb">
-              <i className="fa-solid fa-chevron-right" style={{ fontSize: '10px', marginRight: '6px' }} />
-              {pageMeta.breadcrumb}
-            </span>
+          <div className="topbar-left" style={{ display: 'flex', alignItems: 'center' }}>
+            {/* Hamburger (solo visible en mobile) */}
+            <button className="btn-hamburger" onClick={() => setMobileOpen(true)} title="Abrir menú">
+              <i className="fa-solid fa-bars" />
+            </button>
+            <div>
+              <h1 className="topbar-title">{pageMeta.title}</h1>
+              <span className="topbar-breadcrumb">
+                <i className="fa-solid fa-chevron-right" style={{ fontSize: '10px', marginRight: '6px' }} />
+                {pageMeta.breadcrumb}
+              </span>
+            </div>
           </div>
 
           <div className="topbar-right">

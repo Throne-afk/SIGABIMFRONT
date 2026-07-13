@@ -498,7 +498,7 @@ const Inventarios: React.FC = () => {
       </div>
 
       {/* ── Layout ─────────────────────────────────────────────────── */}
-      <div style={{ display: 'grid', gridTemplateColumns: activeInventario ? '1fr' : '290px 1fr', gap: 'var(--space-5)', alignItems: 'start', transition: 'all 0.3s ease' }}>
+      <div className="inventarios-layout" style={{ display: 'grid', gridTemplateColumns: activeInventario ? '1fr' : '290px 1fr', gap: 'var(--space-5)', alignItems: 'start', transition: 'all 0.3s ease' }}>
 
         {/* ── Panel izquierdo ──────────────────────────────────────── */}
         {!activeInventario && (

@@ -51,7 +51,7 @@ const RecordDetailPanel: React.FC<RecordDetailPanelProps> = ({ record, onClose }
       {/* Banda decorativa superior */}
       <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: 4, background: 'linear-gradient(90deg, var(--color-primary-400), var(--color-primary-600))' }}></div>
 
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 28 }}>
+      <div className="detail-header-flex" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 28 }}>
         <div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
             <span style={{ 
@@ -165,7 +165,7 @@ const RecordDetailPanel: React.FC<RecordDetailPanelProps> = ({ record, onClose }
               </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
+            <div className="grid-cols-2" style={{ display: 'grid', gap: 14 }}>
 
               {/* Columna izquierda: Pendientes */}
               <div className="card" style={{ padding: 0 }}>
@@ -178,7 +178,7 @@ const RecordDetailPanel: React.FC<RecordDetailPanelProps> = ({ record, onClose }
                     <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--color-neutral-500)' }}>Campos o procesos que requieren revisión.</div>
                   </div>
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
+                <div className="grid-cols-2" style={{ display: 'grid' }}>
                   <ValidationCard
                     title="Campos sin información"
                     desc={`Se detectaron ${emptyFieldsCount} campos con S/INF dentro del registro.`}

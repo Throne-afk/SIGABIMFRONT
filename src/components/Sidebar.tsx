@@ -49,9 +49,11 @@ const NAV_ITEMS: NavItem[] = [
 interface SidebarProps {
   collapsed: boolean
   onToggle: () => void
+  mobileOpen?: boolean
+  onMobileClose?: () => void
 }
 
-const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
+const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle, mobileOpen, onMobileClose }) => {
   const location = useLocation()
   const { profile } = useAuth()
 
@@ -61,8 +63,15 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
     return true
   })
 
+  // Close sidebar on mobile when navigating
+  const handleNavClick = () => {
+    if (mobileOpen && onMobileClose) {
+      onMobileClose()
+    }
+  }
+
   return (
-    <aside className={`sidebar${collapsed ? ' collapsed' : ''}`}>
+    <aside className={`sidebar${collapsed ? ' collapsed' : ''}${mobileOpen ? ' mobile-open' : ''}`}>
       {/* Header / Brand */}
       <div className="sidebar-header">
         <div className="sidebar-logo">
@@ -90,6 +99,7 @@ const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
               to={item.path}
               className={`nav-item${isActive ? ' active' : ''}`}
               title={collapsed ? item.label : undefined}
+              onClick={handleNavClick}
             >
               <span className="nav-icon">
                 <i className={item.icon} />

@@ -58,7 +58,7 @@ const InventarioDashboard: React.FC<InventarioDashboardProps> = ({ inventarioId 
         </div>
 
         {/* Sub-cards: composición */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
+        <div className="grid-dashboard" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
           <ComposicionCard label="Equipo Principal" value={stats.equipoPrincipal} icon="fa-desktop" color="blue" />
           <ComposicionCard label="Componentes"      value={stats.componentes}      icon="fa-puzzle-piece" color="blue" />
           <ComposicionCard label="No Inventariables" value={stats.noInventariables} icon="fa-ban" color="yellow" />
@@ -67,7 +67,7 @@ const InventarioDashboard: React.FC<InventarioDashboardProps> = ({ inventarioId 
       </div>
 
       {/* ── Fila inferior: métricas GRP ── */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
+      <div className="grid-dashboard" style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10 }}>
 
         <div className="stat-card">
           <div className="stat-icon blue" style={{ borderRadius: '50%' }}><i className="fa-solid fa-registered" /></div>

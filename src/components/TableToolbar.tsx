@@ -35,10 +35,10 @@ const TableToolbar: React.FC<TableToolbarProps> = ({
   };
 
   return (
-    <div style={{ display: 'flex', gap: 10, marginBottom: 14, alignItems: 'stretch' }}>
+    <div className="flex-wrap-mobile" style={{ display: 'flex', gap: 10, marginBottom: 14, alignItems: 'stretch' }}>
 
       {/* ── Buscador ── */}
-      <div style={{ flex: 1, position: 'relative', display: 'flex', alignItems: 'center' }}>
+      <div style={{ flex: '1 1 250px', position: 'relative', display: 'flex', alignItems: 'center' }}>
         <i
           className="fa-solid fa-magnifying-glass"
           style={{ position: 'absolute', left: 12, color: 'var(--color-neutral-400)', fontSize: 13, pointerEvents: 'none' }}

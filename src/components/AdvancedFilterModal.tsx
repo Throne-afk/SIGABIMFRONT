@@ -454,10 +454,10 @@ const AdvancedFilterModal: React.FC<AdvancedFilterModalProps> = ({
         </div>
 
         {/* BODY */}
-        <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+        <div className="flex-col-mobile" style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
 
           {/* SIDEBAR */}
-          <div style={{ width: '260px', minWidth: 260, borderRight: '1px solid var(--color-neutral-200)', overflowY: 'auto', background: 'var(--color-neutral-50)' }}>
+          <div className="filter-sidebar" style={{ borderRight: '1px solid var(--color-neutral-200)', overflowY: 'auto', background: 'var(--color-neutral-50)' }}>
             <div style={{ padding: '12px 14px 6px', fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-neutral-500)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
               Clasificaciones
             </div>
