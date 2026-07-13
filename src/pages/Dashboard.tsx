@@ -2,12 +2,11 @@ import React, { useEffect, useState } from 'react';
 import { fetchInventarios, fetchInventarioStats, type InventarioStats } from '../api/inventario';
 import { fetchBitacora, type BitacoraRecord } from '../api/bitacora';
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer,
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer,
   PieChart, Pie, Cell
 } from 'recharts';
 
 // Colores para las gráficas
-const COLORS = ['#2563eb', '#3b82f6', '#60a5fa', '#93c5fd', '#bfdbfe'];
 const PIE_COLORS = ['#10b981', '#f59e0b', '#ef4444'];
 
 const Dashboard: React.FC = () => {
@@ -202,7 +201,7 @@ const Dashboard: React.FC = () => {
                     paddingAngle={2}
                     dataKey="value"
                   >
-                    {grpData.map((entry, index) => (
+                    {grpData.map((_, index) => (
                       <Cell key={`cell-${index}`} fill={PIE_COLORS[index % PIE_COLORS.length]} />
                     ))}
                   </Pie>

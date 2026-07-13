@@ -67,6 +67,7 @@ const AppRoutes: React.FC = () => (
         <Route path="catalogos"       element={<Catalogos />} />
         <Route path="configuracion"   element={<Configuracion />} />
         <Route path="administracion"  element={<Administracion />} />
+        <Route path="bitacora"        element={<Bitacora />} />
       </Route>
     </Route>
 
