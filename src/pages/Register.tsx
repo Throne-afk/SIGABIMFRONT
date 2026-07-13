@@ -51,7 +51,7 @@ const Register: React.FC = () => {
             <p className="auth-brand-subtitle">Sistema de Gestión de Activos e Inventarios BIM</p>
           </div>
           <div className="auth-brand-footer">
-            <span>© 2025 SIGABIM — Todos los derechos reservados</span>
+            <span>© 2026 SIGABIM - Sistema Integral de Gestión de Almacenes y Bienes Muebles</span>
           </div>
         </div>
         <div className="auth-form-panel">
@@ -107,7 +107,7 @@ const Register: React.FC = () => {
           </div>
         </div>
         <div className="auth-brand-footer">
-          <span>© 2025 SIGABIM — Todos los derechos reservados</span>
+          <span>© 2026 SIGABIM - Sistema Integral de Gestión de Almacenes y Bienes Muebles</span>
         </div>
       </div>
 

@@ -1,5 +1,9 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { fetchColumnValues } from '../api/inventario';
+
+// ── Caché en memoria: evita re-pedir valores al backend cuando ya se cargaron ────
+const _valuesCache = new Map<string, string[]>();
+const cacheKey = (inventarioId: string, col: string) => `${inventarioId}::${col}`;
 
 // Nombres exactos de las columnas del Excel (Fila 3) + keywords para match flexible
 const COL_GROUPS: { id: string; name: string; cols: string[]; keywords: string[] }[] = [
@@ -160,11 +164,11 @@ interface ColComboboxProps {
 
 const ColCombobox: React.FC<ColComboboxProps> = ({ col, inventarioId, value, onChange }) => {
   const [inputVal, setInputVal]   = useState(value);
-  const [options, setOptions]     = useState<string[]>([]);
+  const [options, setOptions]     = useState<string[]>(() => _valuesCache.get(cacheKey(inventarioId, col)) || []);
   const [loading, setLoading]     = useState(false);
   const [open, setOpen]           = useState(false);
-  const [fetched, setFetched]     = useState(false);
   const wrapRef = useRef<HTMLDivElement>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Sincronizar inputVal con value externo (e.g. al limpiar filtros)
   useEffect(() => { setInputVal(value); }, [value]);
@@ -180,16 +184,23 @@ const ColCombobox: React.FC<ColComboboxProps> = ({ col, inventarioId, value, onC
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
-  const fetchOptions = async () => {
-    if (fetched) return;
+  const fetchOptions = useCallback(async () => {
+    const key = cacheKey(inventarioId, col);
+    // Si ya está en caché, usarlo directamente sin fetch
+    if (_valuesCache.has(key)) {
+      setOptions(_valuesCache.get(key)!);
+      return;
+    }
     setLoading(true);
     try {
-      const resp = await fetchColumnValues(inventarioId, col, 200);
-      if (resp.success && resp.data) setOptions(resp.data);
+      const resp = await fetchColumnValues(inventarioId, col, 300);
+      if (resp.success && resp.data) {
+        _valuesCache.set(key, resp.data);
+        setOptions(resp.data);
+      }
     } catch { /* silenciar */ }
     setLoading(false);
-    setFetched(true);
-  };
+  }, [inventarioId, col]);
 
   const handleFocus = () => {
     setOpen(true);
@@ -201,7 +212,9 @@ const ColCombobox: React.FC<ColComboboxProps> = ({ col, inventarioId, value, onC
     setInputVal(v);
     onChange(v);
     setOpen(true);
-    fetchOptions();
+    // Debounce: esperar 300ms antes de refrescar opciones
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => fetchOptions(), 300);
   };
 
   const handleSelect = (opt: string) => {

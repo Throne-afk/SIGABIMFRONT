@@ -12,6 +12,8 @@ interface VirtualTableProps {
   inventarioId: string
   /** Cabeceras extraídas de la Fila 3 del Excel */
   cabeceras: string[]
+  /** Columnas visibles (subset de cabeceras). Si undefined, se muestran todas. */
+  visibleCabeceras?: string[]
   /** Búsqueda global */
   search?: string
   /** Filtros avanzados (columna -> valor) */
@@ -211,6 +213,7 @@ function renderCell(value: CellValue): React.ReactNode {
 const VirtualTable: React.FC<VirtualTableProps> = ({
   inventarioId,
   cabeceras,
+  visibleCabeceras,
   totalRegistros,
   search,
   filters,
@@ -313,18 +316,15 @@ const VirtualTable: React.FC<VirtualTableProps> = ({
     })
   }
 
-  // ─── Render ───────────────────────────────────────────────────────────────
+  // ─── Columnas a renderizar (visibles) ────────────────────────────────────
+  // Si se pasa visibleCabeceras, filtramos y mantenemos el orden original de cabeceras
+  const renderCabeceras = visibleCabeceras
+    ? cabeceras.filter(h => visibleCabeceras.includes(h))
+    : cabeceras;
 
-  const totalCols = cabeceras.length // Datos solamente
+  const totalCols = renderCabeceras.length
 
   // ─── Construir grupos para el encabezado ─────────────────────────────────
-  //
-  // Estrategia de matching (en orden de prioridad):
-  //  1. Match exacto: la cabecera del Excel está listada en g.cols
-  //  2. Match flexible: la cabecera normalizada contiene alguno de los keywords del grupo
-  //
-  // El orden del grupo al que se asigna una columna es el orden definido en COL_GROUPS,
-  // pero el orden de aparición en la tabla sigue el orden de 'cabeceras' (del Excel).
 
   // Mapa rápido para match exacto
   const colToGroupName = new Map<string, string>();
@@ -462,8 +462,8 @@ const VirtualTable: React.FC<VirtualTableProps> = ({
             <col style={{ width: 80 }} />
             {/* # */}
             <col style={{ width: 52 }} />
-            {/* Columnas de datos */}
-            {cabeceras.map((_, i) => (
+            {/* Columnas de datos visibles */}
+            {renderCabeceras.map((_, i) => (
               <col key={i} style={{ minWidth: 150 }} />
             ))}
           </colgroup>
@@ -485,7 +485,7 @@ const VirtualTable: React.FC<VirtualTableProps> = ({
             </tr>
             {/* Fila 2: Cabeceras */}
             <tr>
-              {cabeceras.map((h, i) => (
+              {renderCabeceras.map((h, i) => (
                 <th key={`h-${i}`} className="excel-th-sub" title={h} style={{ background: 'var(--color-neutral-700)', borderColor: 'var(--color-neutral-800)', borderBottom: '2px solid var(--color-neutral-900)', color: '#fff' }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                     <span>{h}</span>
@@ -550,7 +550,7 @@ const VirtualTable: React.FC<VirtualTableProps> = ({
                   </td>
 
                   {/* Columnas de datos */}
-                  {cabeceras.map((h) => (
+                  {renderCabeceras.map((h) => (
                     <td
                       key={`${idx}-${h}`}
                       className="excel-td"
@@ -582,7 +582,7 @@ const VirtualTable: React.FC<VirtualTableProps> = ({
                       <span className="excel-skel" style={{ width: 24, height: 12 }} />
                     </td>
                     {/* Resto de columnas */}
-                    {Array.from({ length: cabeceras.length }).map((_, j) => (
+                    {Array.from({ length: renderCabeceras.length }).map((_, j) => (
                       <td key={j} className="excel-td" style={{ background: dataBg }}>
                         <span
                           className="excel-skel"

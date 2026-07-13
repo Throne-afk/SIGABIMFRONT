@@ -158,3 +158,27 @@ export const updateRecord = async (
   )
   return response.data
 }
+
+export interface InventarioStats {
+  totalGeneral: number;
+  equipoPrincipal: number;
+  componentes: number;
+  noInventariables: number;
+  activos: number;
+  registradosGrp: number;
+  enProceso: number;
+  avanceGrpPct: number;
+  faltaGrpPct: number;
+}
+
+/**
+ * Obtiene las estadísticas para el dashboard.
+ */
+export const fetchInventarioStats = async (
+  id: string
+): Promise<ApiResponse<InventarioStats>> => {
+  const response = await apiClient.get<ApiResponse<InventarioStats>>(
+    `/inventarios/${id}/stats`
+  )
+  return response.data
+}

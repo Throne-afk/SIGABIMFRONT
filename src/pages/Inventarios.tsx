@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect } from 'react'
+import React, { useState, useCallback, useEffect, useMemo } from 'react'
 import {
   uploadInventarioExcel,
   fetchInventarios,
@@ -13,6 +13,8 @@ import TableToolbar from '../components/TableToolbar'
 import AdvancedFilterModal from '../components/AdvancedFilterModal'
 import RecordDetailPanel from '../components/RecordDetailPanel'
 import RecordEditPanel from '../components/RecordEditPanel'
+import InventarioDashboard from '../components/InventarioDashboard'
+import ColumnPickerModal from '../components/ColumnPickerModal'
 
 // ─── Tipos ─────────────────────────────────────────────────────────────────────
 
@@ -298,6 +300,38 @@ const Inventarios: React.FC = () => {
 
   const [advancedFilters, setAdvancedFilters] = useState<Record<string, string>>({})
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false)
+  const [isColumnPickerOpen, setIsColumnPickerOpen] = useState(false)
+
+  // Columnas visibles — persiste en sessionStorage por inventario
+  const [visibleCols, setVisibleCols] = useState<Set<string> | null>(null)
+
+  // Cuando cambia el inventario activo, restaurar la selección guardada (o mostrar todas)
+  useEffect(() => {
+    if (!activeInventario) return;
+    const key = `sigabim_cols_${activeInventario.id}`;
+    const saved = sessionStorage.getItem(key);
+    if (saved) {
+      try {
+        setVisibleCols(new Set(JSON.parse(saved)));
+        return;
+      } catch { /* ignorar */ }
+    }
+    // Por defecto: todas las columnas visibles
+    setVisibleCols(null);
+  }, [activeInventario?.id])
+
+  const handleApplyColumns = useCallback((cols: Set<string>) => {
+    setVisibleCols(cols);
+    if (activeInventario) {
+      sessionStorage.setItem(`sigabim_cols_${activeInventario.id}`, JSON.stringify([...cols]));
+    }
+  }, [activeInventario])
+
+  // Array de columnas visibles (para pasar a VirtualTable)
+  const visibleCabecerasArr = useMemo(() => {
+    if (!visibleCols || !activeInventario) return undefined;
+    return activeInventario.cabeceras.filter(c => visibleCols.has(c));
+  }, [visibleCols, activeInventario])
 
   // Estados para el registro seleccionado
   const [selectedRecord, setSelectedRecord] = useState<InventarioRecord | null>(null)
@@ -556,8 +590,9 @@ const Inventarios: React.FC = () => {
                 </div>
               </div>
 
-              {/* Toolbar */}
-              <div style={{ padding: '0 16px', marginTop: '15px' }}>
+              {/* Dashboard de métricas */}
+              <InventarioDashboard inventarioId={activeInventario.id} />
+
               {/* Toolbar */}
               <div style={{ padding: '0 16px', marginTop: '15px', display: !showEditPanel ? 'block' : 'none' }}>
                 <TableToolbar 
@@ -566,12 +601,13 @@ const Inventarios: React.FC = () => {
                   onOpenFilter={() => setIsFilterModalOpen(!isFilterModalOpen)}
                   onAdd={handleAdd}
                   onExport={() => showToast('Exportación de tabla en desarrollo', 'info')}
+                  onOpenColumnPicker={() => setIsColumnPickerOpen(true)}
                   activeFiltersCount={Object.keys(advancedFilters).length}
+                  visibleCols={visibleCols ? visibleCols.size : activeInventario.cabeceras.length}
+                  totalCols={activeInventario.cabeceras.length}
                 />
               </div>
-              </div>
 
-              {/* Panel de Filtros Avanzados (ahora integrado en línea) */}
               {/* Panel de Filtros Avanzados (ahora integrado en línea) */}
               <div style={{ padding: '0 16px', display: !showEditPanel ? 'block' : 'none' }}>
                 <AdvancedFilterModal 
@@ -601,6 +637,7 @@ const Inventarios: React.FC = () => {
                     key={activeInventario.id + globalSearch + JSON.stringify(advancedFilters)}
                     inventarioId={activeInventario.id}
                     cabeceras={activeInventario.cabeceras}
+                    visibleCabeceras={visibleCabecerasArr}
                     totalRegistros={activeInventario.totalRegistros}
                     search={globalSearch}
                     filters={advancedFilters}
@@ -633,6 +670,7 @@ const Inventarios: React.FC = () => {
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: 400, padding: 'var(--space-10)' }}>
               <h2 style={{ fontSize: '1.4rem', color: 'var(--color-neutral-800)', marginBottom: 'var(--space-8)' }}>
                 Selecciona el apartado para <br/><span style={{ color: 'var(--color-primary-600)' }}>{activeArchivo}</span>
+
               </h2>
               <div style={{ display: 'flex', gap: 'var(--space-6)', flexWrap: 'wrap', justifyContent: 'center' }}>
                 {inventarios.filter(inv => inv.archivo === activeArchivo).map(inv => {
@@ -672,6 +710,17 @@ const Inventarios: React.FC = () => {
             </div>
           )}
         </div>
+
+        {/* Modal selector de columnas — fuera del ternario, siempre disponible cuando hay inventario activo */}
+        {activeInventario && (
+          <ColumnPickerModal
+            isOpen={isColumnPickerOpen}
+            onClose={() => setIsColumnPickerOpen(false)}
+            cabeceras={activeInventario.cabeceras}
+            visible={visibleCols ?? new Set(activeInventario.cabeceras)}
+            onApply={handleApplyColumns}
+          />
+        )}
       </div>
 
       {/* ── Toast Notifications ─────────────────────────────────────── */}

@@ -115,7 +115,7 @@ const Login: React.FC = () => {
         </div>
       </div>
 
-      <p className="login-copyright">© 2025 SIGABIM — Sistema de Gestión de Activos BIM</p>
+      <p className="login-copyright">© 2026 SIGABIM - Sistema Integral de Gestión de Almacenes y Bienes Muebles</p>
     </div>
   )
 }
