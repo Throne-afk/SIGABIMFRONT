@@ -13,8 +13,11 @@ const RecordDetailPanel: React.FC<RecordDetailPanelProps> = ({ record, onClose }
 
   const { datos } = record;
 
-  // Extraer valores clave para el detalle
-  const getVal = (col: string) => datos[col] || 'N/A';
+  // Extraer valores clave para el detalle y convertirlos a string
+  const getVal = (col: string) => {
+    const val = datos[col];
+    return (val !== null && val !== undefined && val !== '') ? String(val) : 'N/A';
+  };
   
   const idOficial = getVal('Número de Inventario Oficial') !== 'N/A' ? getVal('Número de Inventario Oficial') : (getVal('Clave Artículo') !== 'N/A' ? getVal('Clave Artículo') : 'Registro Seleccionado');
   const descCorta = getVal('Descripción Corta del Bien');

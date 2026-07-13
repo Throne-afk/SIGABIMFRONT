@@ -21,7 +21,6 @@ const TableToolbar: React.FC<TableToolbarProps> = ({
   onOpenColumnPicker,
   activeFiltersCount,
   visibleCols,
-  totalCols,
 }) => {
   const [searchValue, setSearchValue] = useState(search);
 
