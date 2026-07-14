@@ -192,9 +192,22 @@ const COL_GROUPS: { name: string; cols: string[]; keywords: string[] }[] = [
 ];
 
 
-function renderCell(value: CellValue): React.ReactNode {
+function renderCell(value: CellValue, colName?: string): React.ReactNode {
   const text = cellText(value)
   if (!text) return <span className="excel-cell-empty">—</span>
+
+  if (colName && (colName.trim().toLowerCase() === 'valor unitario' || colName.trim().toLowerCase() === 'valor total')) {
+    const num = parseFloat(String(value).replace(/[^0-9.-]+/g, ''))
+    if (!isNaN(num)) {
+      return (
+        <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', minWidth: '100px' }}>
+          <span>$</span>
+          <span>{num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+        </div>
+      )
+    }
+  }
+
   return text
 }
 
@@ -557,7 +570,7 @@ const VirtualTable: React.FC<VirtualTableProps> = ({
                       style={{ background: dataBg }}
                       title={cellText(row.datos[h])}
                     >
-                      {renderCell(row.datos[h])}
+                      {renderCell(row.datos[h], h)}
                     </td>
                   ))}
                 </tr>

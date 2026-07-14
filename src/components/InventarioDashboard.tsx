@@ -62,7 +62,7 @@ const InventarioDashboard: React.FC<InventarioDashboardProps> = ({ inventarioId 
           <ComposicionCard label="Equipo Principal" value={stats.equipoPrincipal} icon="fa-desktop" color="blue" />
           <ComposicionCard label="Componentes"      value={stats.componentes}      icon="fa-puzzle-piece" color="blue" />
           <ComposicionCard label="No Inventariables" value={stats.noInventariables} icon="fa-ban" color="yellow" />
-          <ComposicionCard label="Faltante de Validación Física" value={stats.activos} icon="fa-clipboard-question" color="yellow" />
+          <ComposicionCard label="Validación Física" value={stats.activos} icon="fa-clipboard-question" color="yellow" />
         </div>
       </div>
 
@@ -75,7 +75,7 @@ const InventarioDashboard: React.FC<InventarioDashboardProps> = ({ inventarioId 
             <div className="stat-value" style={{ fontSize: 'var(--font-size-2xl)', color: 'var(--color-primary-700)' }}>
               {stats.registradosGrp.toLocaleString('es-MX')}
             </div>
-            <div className="stat-label">Registrados en GRP</div>
+            <div className="stat-label">Registrado en GRP</div>
             <div className="stat-change">Bienes con alta o registro formal</div>
           </div>
         </div>
@@ -86,7 +86,7 @@ const InventarioDashboard: React.FC<InventarioDashboardProps> = ({ inventarioId 
             <div className="stat-value" style={{ fontSize: 'var(--font-size-2xl)', color: 'var(--color-warning-dark)' }}>
               {stats.enProceso.toLocaleString('es-MX')}
             </div>
-            <div className="stat-label">En proceso de regularización</div>
+            <div className="stat-label">Proceso de Regularización (Alta GRP)</div>
             <div className="stat-change">Pendientes de validación o ajuste</div>
           </div>
         </div>
