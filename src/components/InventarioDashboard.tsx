@@ -35,7 +35,8 @@ const InventarioDashboard: React.FC<InventarioDashboardProps> = ({ inventarioId 
 
   if (!stats) return null;
 
-  const avancePct = stats.avanceGrpPct ?? 0;
+  const avancePct = Math.round(stats.avanceGrpPct ?? 0);
+  const faltaPct = 100 - avancePct;
 
   return (
     <div style={{ borderBottom: '1px solid var(--color-neutral-200)', padding: '16px' }}>
@@ -110,7 +111,7 @@ const InventarioDashboard: React.FC<InventarioDashboardProps> = ({ inventarioId 
           <div className="stat-icon yellow" style={{ borderRadius: '50%' }}><i className="fa-solid fa-triangle-exclamation" /></div>
           <div className="stat-info">
             <div className="stat-value" style={{ fontSize: 'var(--font-size-2xl)', color: 'var(--color-warning)' }}>
-              {stats.faltaGrpPct}%
+              {faltaPct}%
             </div>
             <div className="stat-label">Falta para 100% avance GRP</div>
             <div className="stat-change">Brecha pendiente de integración</div>

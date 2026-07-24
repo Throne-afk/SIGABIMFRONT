@@ -191,3 +191,48 @@ export const fetchInventarioStats = async (
   )
   return response.data
 }
+
+// ─── Historial de Bajas ────────────────────────────────────────────────────────
+
+export interface BajaRecord {
+  id: string
+  rowId: string
+  inventarioId: string
+  numeroInventario: string
+  descripcion: string
+  universo: string
+  tipoMovimiento: 'baja' | 'inhabilitado' | 'modificacion' | string
+  campoModificado?: string
+  valorAnterior?: string
+  valorNuevo?: string
+  usuario: string
+  fechaMovimiento: string
+  observaciones?: string
+}
+
+/**
+ * Obtiene el historial de bajas e inhabilitaciones del inventario.
+ * Retorna los cambios registrados en la bitácora filtrados por tipo baja/inhabilitado.
+ */
+export const fetchBajasHistory = async (
+  id: string
+): Promise<ApiResponse<BajaRecord[]>> => {
+  try {
+    const response = await apiClient.get<ApiResponse<BajaRecord[]>>(
+      `/inventarios/${id}/bajas`
+    )
+    return response.data
+  } catch {
+    // Si el endpoint no existe aún, retornar vacío
+    return { success: true, message: 'ok', data: [] }
+  }
+}
+
+/**
+ * Obtiene los valores únicos del campo "Universo" para el inventario.
+ */
+export const fetchUniversos = async (
+  id: string
+): Promise<ApiResponse<string[]>> => {
+  return fetchColumnValues(id, 'Universo', 500)
+}
